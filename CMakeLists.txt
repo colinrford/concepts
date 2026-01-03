@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True) #is this needed?
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(lam_concepts VERSION 0.1.0 LANGUAGES CXX)
+project(lam_concepts VERSION 0.1.260103 LANGUAGES CXX)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -47,6 +47,7 @@ configure_file(
 
 add_library(concepts STATIC)
 add_library(lam::concepts ALIAS concepts)
+set_target_properties(concepts PROPERTIES OUTPUT_NAME lam_concepts)
 target_sources(concepts PUBLIC
   FILE_SET CXX_MODULES
   TYPE CXX_MODULES
@@ -54,3 +55,43 @@ target_sources(concepts PUBLIC
         ${CMAKE_CURRENT_BINARY_DIR}/config.cppm
 )
 target_compile_features(concepts PUBLIC cxx_std_23)
+
+# === INSTALLATION ===
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+# On macOS with -DCMAKE_INSTALL_PREFIX=/usr/local:
+#   Libraries     -> /usr/local/lib/liblam_concepts.a
+#   CMake config  -> /usr/local/lib/cmake/lam_concepts/
+#   C++ modules   -> /usr/local/lib/cmake/lam_concepts/modules/
+
+install(TARGETS concepts
+  EXPORT lam_conceptsTargets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/c++/v1
+)
+
+install(EXPORT lam_conceptsTargets
+  FILE lam_conceptsTargets.cmake
+  NAMESPACE lam::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_concepts
+)
+
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfig.cmake" [[
+include(CMakeFindDependencyMacro)
+include("${CMAKE_CURRENT_LIST_DIR}/lam_conceptsTargets.cmake")
+]])
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfigVersion.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_concepts
+)
