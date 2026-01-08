@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True) #is this needed?
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(lam_concepts VERSION 0.1.260103 LANGUAGES CXX)
+project(lam_concepts VERSION 0.1.260108 LANGUAGES CXX)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -51,6 +51,7 @@ set_target_properties(concepts PROPERTIES OUTPUT_NAME lam_concepts)
 target_sources(concepts PUBLIC
   FILE_SET CXX_MODULES
   TYPE CXX_MODULES
+  BASE_DIRS src/experimental ${CMAKE_CURRENT_BINARY_DIR}
   FILES src/experimental/concepts.cppm
         ${CMAKE_CURRENT_BINARY_DIR}/config.cppm
 )
