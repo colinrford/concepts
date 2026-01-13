@@ -16,7 +16,7 @@ module;
 
 import std;
 
-export module lam.concepts;//:experimental;
+export module lam.concepts;
 
 /*
  *  all concepts will be declared with _c to distinguish them from types, etc
@@ -217,7 +217,7 @@ namespace lam::concepts::experimental::internals
   concept linear_transformation_c_weak =
     vectorspace_element_c_weak<V, typename V::scalar_type> &&
     vectorspace_element_c_weak<W, typename W::scalar_type> && requires(F f, V v) {
-      { f(v) } -> std::convertible_to<W>; // Functional application returns vector in W
+      { f(v) } -> std::convertible_to<W>;
     };
 
   /**
@@ -226,18 +226,12 @@ namespace lam::concepts::experimental::internals
    */
   template<typename M, typename Scalar>
   concept matrix_c_weak =
-    vectorspace_element_c_weak<M, Scalar> // Matrix itself is a vector space
+    vectorspace_element_c_weak<M, Scalar>
     && requires(M m, typename M::size_type i) {
          typename M::size_type;
-
-         // Dimensions
          { m.rows() } -> std::integral;
          { m.cols() } -> std::integral;
-
-         // Element access
          { m[i, i] } -> std::convertible_to<Scalar>;
-
-         // Row/Column accessors (return iterable views)
          { m.row(i) };
          { m.col(i) };
          // { m.rows_range() }; // Optional?
@@ -251,10 +245,7 @@ namespace lam::concepts::experimental::internals
    */
   template<typename Rho, typename G, typename V>
   concept representation_c_weak = requires(Rho rho, G g, V v) {
-    // rho(g) must be a linear transformation V -> V
     { rho(g) } -> linear_transformation_c_weak<V, V>;
-
-    // Applying the transformation to a vector
     { rho(g)(v) } -> std::same_as<V>;
   };
 
