@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True) #is this needed?
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(lam_concepts VERSION 0.1.260111 LANGUAGES CXX)
+project(lam_concepts VERSION 0.1.260113 LANGUAGES CXX)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -41,8 +41,8 @@ else()
 endif()
 
 configure_file(
-  config.cppm.in
-  ${CMAKE_CURRENT_BINARY_DIR}/config.cppm
+  concepts_config.cppm.in
+  ${CMAKE_CURRENT_BINARY_DIR}/concepts_config.cppm
 )
 
 add_library(concepts STATIC)
@@ -53,7 +53,7 @@ target_sources(concepts PUBLIC
   TYPE CXX_MODULES
   BASE_DIRS src/experimental ${CMAKE_CURRENT_BINARY_DIR}
   FILES src/experimental/concepts.cppm
-        ${CMAKE_CURRENT_BINARY_DIR}/config.cppm
+        ${CMAKE_CURRENT_BINARY_DIR}/concepts_config.cppm
 )
 target_compile_features(concepts PUBLIC cxx_std_23)
 
