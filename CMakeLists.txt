@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True) #is this needed?
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(lam_concepts VERSION 0.1.260113 LANGUAGES CXX)
+project(lam_concepts VERSION 0.1.260116 LANGUAGES CXX)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -46,7 +46,7 @@ configure_file(
 )
 
 add_library(concepts STATIC)
-add_library(lam::concepts ALIAS concepts)
+add_library(lam_concepts::concepts ALIAS concepts)
 set_target_properties(concepts PROPERTIES OUTPUT_NAME lam_concepts)
 target_sources(concepts PUBLIC
   FILE_SET CXX_MODULES
@@ -76,13 +76,22 @@ install(TARGETS concepts
 
 install(EXPORT lam_conceptsTargets
   FILE lam_conceptsTargets.cmake
-  NAMESPACE lam::
+  NAMESPACE lam_concepts::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_concepts
 )
 
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfig.cmake" [[
 include(CMakeFindDependencyMacro)
 include("${CMAKE_CURRENT_LIST_DIR}/lam_conceptsTargets.cmake")
+]])
+
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfig.cmake" [[
+include(CMakeFindDependencyMacro)
+include("${CMAKE_CURRENT_LIST_DIR}/lam_conceptsTargets.cmake")
+# Create the legacy alias so users can still type lam::concepts
+if(TARGET lam_concepts::concepts AND NOT TARGET lam::concepts)
+  add_library(lam::concepts ALIAS lam_concepts::concepts)
+endif()
 ]])
 
 write_basic_package_version_file(

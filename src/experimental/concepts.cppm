@@ -1,15 +1,13 @@
 /*
  *  concepts.cppm – written by Colin Ford
- *    see github.com/colinrford/polynomial_nttp for AGPL-3.0 License, and
- *                                              for more info
- *  experimental.concepts is a c++ module
+ *    see github.com/colinrford/concepts
+ *
+ *  
+ *
+ *  lam.concepts is a c++ module
  *    as the name suggests, the contents found here are strictly experimental,
  *    and while the project will compile and run just fine, these concepts are
  *    still very much in development
- *
- *  these concepts are part of another library I am working on, and are
- *    subject to reappear within that library under a different license,
- *    whenever said library is released
  */
 
 module;
