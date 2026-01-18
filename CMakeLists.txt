@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True) #is this needed?
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(lam_concepts VERSION 0.1.260116 LANGUAGES CXX)
+project(lam_concepts VERSION 0.1.260118 LANGUAGES CXX)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -47,6 +47,7 @@ configure_file(
 
 add_library(concepts STATIC)
 add_library(lam_concepts::concepts ALIAS concepts)
+add_library(lam::concepts ALIAS concepts)
 set_target_properties(concepts PROPERTIES OUTPUT_NAME lam_concepts)
 target_sources(concepts PUBLIC
   FILE_SET CXX_MODULES
@@ -57,7 +58,6 @@ target_sources(concepts PUBLIC
 )
 target_compile_features(concepts PUBLIC cxx_std_23)
 
-# === INSTALLATION ===
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
