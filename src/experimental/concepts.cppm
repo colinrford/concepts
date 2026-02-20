@@ -1,7 +1,6 @@
 /*
  *  concepts.cppm – written by Colin Ford
  *    see github.com/colinrford/concepts
- *
  *  
  *
  *  lam.concepts is a c++ module
@@ -15,6 +14,8 @@ module;
 import std;
 
 export module lam.concepts;
+
+export import :config;
 
 /*
  *  all concepts will be declared with _c to distinguish them from types, etc
