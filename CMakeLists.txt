@@ -1,7 +1,9 @@
 
 cmake_minimum_required(VERSION 3.31.6 FATAL_ERROR)
 
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0.3)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.3.0)
+  set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "451f2fe2-a8a2-47c3-bc32-94786d8fc91b")
+elseif(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0.3)
   set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
 elseif(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0.0)
   set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "a9e1cf81-9932-4810-974b-6eccaf14e457")
@@ -52,17 +54,17 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-find_package(Git)
-if(GIT_FOUND)
-  execute_process(
-    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-else()
-  set(GIT_HASH "unknown")
-endif()
+# --- lam.concepts:config generation ------------------------------------------
+# git_hash refreshes whenever .git/logs/HEAD changes (any HEAD-affecting op).
+# See symbols/CMakeLists.txt for the design rationale.
+execute_process(
+  COMMAND git -C "${CMAKE_CURRENT_SOURCE_DIR}" rev-parse --git-path logs/HEAD
+  OUTPUT_VARIABLE _git_logs_head
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
+)
+get_filename_component(_git_logs_head "${_git_logs_head}"
+  ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 if(CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE MATCHES "^[Dd][Ee][Bb][Uu][Gg]$")
   set(IS_DEBUG "true")
@@ -70,9 +72,31 @@ else()
   set(IS_DEBUG "false")
 endif()
 
-configure_file(
-  concepts_config.cppm.in
-  ${CMAKE_CURRENT_BINARY_DIR}/concepts_config.cppm
+set(_cfg_out ${CMAKE_CURRENT_BINARY_DIR}/concepts_config.cppm)
+add_custom_command(
+  OUTPUT  ${_cfg_out}
+  COMMAND ${CMAKE_COMMAND}
+          -DTEMPLATE=${CMAKE_CURRENT_SOURCE_DIR}/concepts_config.cppm.in
+          -DOUTPUT=${_cfg_out}
+          -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+          -DPROJECT_VERSION=${PROJECT_VERSION}
+          -DPROJECT_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+          -DPROJECT_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+          -DPROJECT_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+          -DIS_DEBUG=${IS_DEBUG}
+          -DCMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}
+          -DCMAKE_CXX_COMPILER_VERSION=${CMAKE_CXX_COMPILER_VERSION}
+          -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+          -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+          -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
+          -DCMAKE_GENERATOR=${CMAKE_GENERATOR}
+          -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+          "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}"
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateLamConfig.cmake
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/concepts_config.cppm.in
+          ${_git_logs_head}
+  VERBATIM
 )
 
 add_library(concepts STATIC)
@@ -109,6 +133,21 @@ install(EXPORT lam_conceptsTargets
   NAMESPACE lam_concepts::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_concepts
 )
+
+# --- CPS (Common Package Specification) export ------------------------------
+# Emits lam_concepts.cps alongside the legacy lam_conceptsConfig.cmake.
+# Guarded so older CMake (< 4.3, which lacks install(PACKAGE_INFO)) still configures.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.3)
+  install(PACKAGE_INFO lam_concepts
+    EXPORT       lam_conceptsTargets
+    VERSION      ${PROJECT_VERSION}
+    COMPAT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.0
+    DESCRIPTION  "lam.concepts — algebraic, numeric, and categorical C++23 concepts"
+    LICENSE      "Apache-2.0 WITH LLVM-exception OR MIT OR BSL-1.0"
+    CXX_MODULES_DIRECTORY "c++/v1"
+    DESTINATION  ${CMAKE_INSTALL_LIBDIR}/cps
+  )
+endif()
 
 
 
