@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception OR MIT OR BSL-1.0
+// SPDX-FileCopyrightText: 2025-2026 Colin Ford
+
 /*
  *  concepts.cppm – written by Colin Ford
  *    see github.com/colinrford/concepts
- *  
+ *
  *
  *  lam.concepts is a c++ module
  *    as the name suggests, the contents found here are strictly experimental,
@@ -126,7 +129,49 @@ namespace lam::concepts::experimental::internals
   concept field_element_c_weak = ring_element_c_weak<K>
                               and multiplicative_group_element_c_weak<K>
                               and has_division_c_weak<K>;
+} // end namespace lam::concepts::experimental
+
+
+// ==========================================
+// Type-Level Algebraic Traits (Typeclass Pattern)
+//
+// algebraic_traits<Op> associates algebraic metadata with a binary
+// operation Op. Modules specialize this for concrete operations
+// (e.g., std::plus<void>, std::multiplies<void>) to declare:
+//   - identity type     (Op(identity, x) = x)
+//   - annihilator type  (Op(annihilator, x) = annihilator)
+//   - commutativity     (Op(a, b) = Op(b, a))
+//   - associativity     (Op(Op(a,b), c) = Op(a, Op(b,c)))
+// ==========================================
+
+namespace lam::concepts::experimental
+{
+  // Primary template — unspecialized = operation has no declared structure
+  export template<typename Op>
+  struct algebraic_traits
+  {
+    static constexpr bool specialized = false;
+  };
+} // end namespace lam::concepts::experimental
+
+// Detection helpers — SFINAE-friendly, in internals
+namespace lam::concepts::experimental::internals
+{
+  template<typename Op, typename = void>
+  struct has_identity_trait : std::false_type {};
+
+  template<typename Op>
+  struct has_identity_trait<Op, std::void_t<typename lam::concepts::experimental::algebraic_traits<Op>::identity_type>>
+    : std::true_type {};
+
+  template<typename Op, typename = void>
+  struct has_annihilator_trait : std::false_type {};
+
+  template<typename Op>
+  struct has_annihilator_trait<Op, std::void_t<typename lam::concepts::experimental::algebraic_traits<Op>::annihilator_type>>
+    : std::true_type {};
 } // end namespace lam::concepts::experimental::internals
+
 namespace lam::concepts::experimental
 {
   export template<typename G>
@@ -139,6 +184,13 @@ namespace lam::concepts::experimental
   concept ring_element_c_weak = internals::ring_element_c_weak<R>;
   export template<typename K>
   concept field_element_c_weak = internals::field_element_c_weak<K>;
+
+  // Detection helpers
+  export template<typename Op>
+  constexpr bool has_identity_v = internals::has_identity_trait<Op>::value;
+
+  export template<typename Op>
+  constexpr bool has_annihilator_v = internals::has_annihilator_trait<Op>::value;
 } // end namespace lam::concepts::experimental
 
 
