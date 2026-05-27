@@ -118,7 +118,7 @@ include(CMakePackageConfigHelpers)
 # On macOS with -DCMAKE_INSTALL_PREFIX=/usr/local:
 #   Libraries     -> /usr/local/lib/liblam_concepts.a
 #   CMake config  -> /usr/local/lib/cmake/lam_concepts/
-#   C++ modules   -> /usr/local/include/lam_concepts/
+#   C++ modules   -> /usr/local/include/lam/concepts/
 #   CPS metadata  -> /usr/local/lib/cps/
 
 install(TARGETS concepts
@@ -126,7 +126,7 @@ install(TARGETS concepts
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
+  FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lam/concepts
 )
 
 install(EXPORT lam_conceptsTargets
@@ -145,7 +145,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.3)
     COMPAT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.0
     DESCRIPTION  "lam.concepts — algebraic, numeric, and categorical C++23 concepts"
     LICENSE      "Apache-2.0 WITH LLVM-exception OR MIT OR BSL-1.0"
-    CXX_MODULES_DIRECTORY "include/${PROJECT_NAME}"
+    CXX_MODULES_DIRECTORY "include/lam/concepts"
     DESTINATION  ${CMAKE_INSTALL_LIBDIR}/cps
   )
 endif()
