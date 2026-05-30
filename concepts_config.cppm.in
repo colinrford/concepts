@@ -33,4 +33,20 @@ export namespace lam::concepts::config
   inline constexpr std::string_view generator        = "@CMAKE_GENERATOR@";
   inline constexpr std::string_view toolchain_file   = "@CMAKE_TOOLCHAIN_FILE@";
   inline constexpr std::string_view cxx_flags        = R"_lam_cfg_(@CMAKE_CXX_FLAGS@)_lam_cfg_";
+
+  // Human-readable dump of this module's build configuration. Doubles as the
+  // body of the config_dump smoke test (proves the partition imports cleanly).
+  void print()
+  {
+    std::println("lam.concepts {}  [{}]",
+                 version_string,
+                 build_type.empty() ? std::string_view{"unspecified"} : build_type);
+    std::println("  git        {}{}", git_hash, is_debug ? "  (debug)" : "");
+    std::println("  compiler   {} {}", compiler_id, compiler_version);
+    std::println("  system     {} / {}  [{}]",
+                 system_name, system_processor, generator);
+    std::println("  toolchain  {}",
+                 toolchain_file.empty() ? std::string_view{"(none)"} : toolchain_file);
+    std::println("  cxx_flags  {}", cxx_flags);
+  }
 }

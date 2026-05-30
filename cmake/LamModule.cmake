@@ -12,6 +12,7 @@
 #   lam_install_module_package(<target> NAME <name>
 #                              DESCRIPTION <text> LICENSE <spdx>
 #                              [MODULE_SUBDIR <dir>] [REQUIRES <pkg>...])
+#   lam_add_config_dump(<link-target> NAME <name>)
 
 if(_LAM_MODULE_INCLUDED)
   return()
@@ -171,4 +172,30 @@ function(lam_install_module_package target)
     "${CMAKE_CURRENT_BINARY_DIR}/${_pkg}Config.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/${_pkg}ConfigVersion.cmake"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${_pkg})
+endfunction()
+
+# -----------------------------------------------------------------------------
+# lam_add_config_dump(<link-target> NAME <name>)
+#
+# Generates a tiny <name>_config_dump executable that imports lam.<name> and
+# calls lam::<name>::config::print(), and registers it as a ctest. Doubles as a
+# smoke test (the partition must import + link) and a build-config diagnostic.
+# The module's :config partition must define a print() (see *_config.cppm.in).
+# Requires enable_testing() in the calling submodule. <link-target> is the
+# module library target to link (e.g. the bare target or its alias).
+# -----------------------------------------------------------------------------
+function(lam_add_config_dump link_target)
+  cmake_parse_arguments(PARSE_ARGV 1 _arg "" "NAME" "")
+  if(NOT _arg_NAME)
+    message(FATAL_ERROR "lam_add_config_dump: NAME is required")
+  endif()
+
+  set(_src "${CMAKE_CURRENT_BINARY_DIR}/${_arg_NAME}_config_dump.cpp")
+  file(WRITE "${_src}"
+"import lam.${_arg_NAME};\nint main() { lam::${_arg_NAME}::config::print(); return 0; }\n")
+
+  add_executable(${_arg_NAME}_config_dump "${_src}")
+  target_link_libraries(${_arg_NAME}_config_dump PRIVATE ${link_target})
+  target_compile_features(${_arg_NAME}_config_dump PRIVATE cxx_std_23)
+  add_test(NAME ${_arg_NAME}_config_dump COMMAND ${_arg_NAME}_config_dump)
 endfunction()

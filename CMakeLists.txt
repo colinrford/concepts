@@ -79,6 +79,10 @@ target_compile_features(concepts PUBLIC cxx_std_23)
 # Generate + attach the lam.concepts:config partition (build-time git_hash refresh).
 lam_add_config_partition(concepts NAME concepts)
 
+# config_dump smoke test + build-config diagnostic (imports lam.concepts).
+enable_testing()
+lam_add_config_dump(concepts NAME concepts)
+
 # On macOS with -DCMAKE_INSTALL_PREFIX=/usr/local:
 #   Libraries     -> /usr/local/lib/liblam_concepts.a
 #   CMake config  -> /usr/local/lib/cmake/lam_concepts/
