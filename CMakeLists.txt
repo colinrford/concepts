@@ -18,7 +18,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True) #is this needed?
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(lam_concepts VERSION 0.1.260526 LANGUAGES CXX)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" _lam_concepts_version)
+string(STRIP "${_lam_concepts_version}" _lam_concepts_version)
+
+project(lam_concepts VERSION ${_lam_concepts_version} LANGUAGES CXX)
+
+# Re-run CMake configure whenever VERSION changes.
+set_property(DIRECTORY APPEND PROPERTY
+  CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
 
 # Emscripten needs manual __CMAKE::CXX23 target creation since CMake's
 # detection doesn't find the std modules in Emscripten's toolchain
@@ -54,127 +61,31 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# --- lam.concepts:config generation ------------------------------------------
-# git_hash refreshes whenever .git/logs/HEAD changes (any HEAD-affecting op).
-# See symbols/CMakeLists.txt for the design rationale.
-execute_process(
-  COMMAND git -C "${CMAKE_CURRENT_SOURCE_DIR}" rev-parse --git-path logs/HEAD
-  OUTPUT_VARIABLE _git_logs_head
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  ERROR_QUIET
-)
-get_filename_component(_git_logs_head "${_git_logs_head}"
-  ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-
-if(CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE MATCHES "^[Dd][Ee][Bb][Uu][Gg]$")
-  set(IS_DEBUG "true")
-else()
-  set(IS_DEBUG "false")
-endif()
-
-set(_cfg_out ${CMAKE_CURRENT_BINARY_DIR}/concepts_config.cppm)
-add_custom_command(
-  OUTPUT  ${_cfg_out}
-  COMMAND ${CMAKE_COMMAND}
-          -DTEMPLATE=${CMAKE_CURRENT_SOURCE_DIR}/concepts_config.cppm.in
-          -DOUTPUT=${_cfg_out}
-          -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-          -DPROJECT_VERSION=${PROJECT_VERSION}
-          -DPROJECT_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
-          -DPROJECT_VERSION_MINOR=${PROJECT_VERSION_MINOR}
-          -DPROJECT_VERSION_PATCH=${PROJECT_VERSION_PATCH}
-          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-          -DIS_DEBUG=${IS_DEBUG}
-          -DCMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}
-          -DCMAKE_CXX_COMPILER_VERSION=${CMAKE_CXX_COMPILER_VERSION}
-          -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-          -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
-          -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
-          -DCMAKE_GENERATOR=${CMAKE_GENERATOR}
-          -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-          "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}"
-          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateLamConfig.cmake
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/concepts_config.cppm.in
-          ${_git_logs_head}
-  VERBATIM
-)
+# Vendored lam build helpers (lam_add_config_partition, lam_install_module_package).
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/LamModule.cmake)
 
 add_library(concepts STATIC)
 add_library(lam_concepts::concepts ALIAS concepts)
 add_library(lam::concepts ALIAS concepts)
-set_target_properties(concepts PROPERTIES OUTPUT_NAME lam_concepts)
+set_target_properties(concepts PROPERTIES CXX_MODULE_STD ON OUTPUT_NAME lam_concepts)
 target_sources(concepts PUBLIC
   FILE_SET CXX_MODULES
   TYPE CXX_MODULES
-  BASE_DIRS src/experimental ${CMAKE_CURRENT_BINARY_DIR}
+  BASE_DIRS src/experimental
   FILES src/experimental/concepts.cppm
-        ${CMAKE_CURRENT_BINARY_DIR}/concepts_config.cppm
 )
 target_compile_features(concepts PUBLIC cxx_std_23)
 
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
+# Generate + attach the lam.concepts:config partition (build-time git_hash refresh).
+lam_add_config_partition(concepts NAME concepts)
 
 # On macOS with -DCMAKE_INSTALL_PREFIX=/usr/local:
 #   Libraries     -> /usr/local/lib/liblam_concepts.a
 #   CMake config  -> /usr/local/lib/cmake/lam_concepts/
 #   C++ modules   -> /usr/local/include/lam/concepts/
 #   CPS metadata  -> /usr/local/lib/cps/
-
-install(TARGETS concepts
-  EXPORT lam_conceptsTargets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lam/concepts
-)
-
-install(EXPORT lam_conceptsTargets
-  FILE lam_conceptsTargets.cmake
-  NAMESPACE lam_concepts::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_concepts
-)
-
-# --- CPS (Common Package Specification) export ------------------------------
-# Emits lam_concepts.cps alongside the legacy lam_conceptsConfig.cmake.
-# Guarded so older CMake (< 4.3, which lacks install(PACKAGE_INFO)) still configures.
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.3)
-  install(PACKAGE_INFO lam_concepts
-    EXPORT       lam_conceptsTargets
-    VERSION      ${PROJECT_VERSION}
-    COMPAT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.0
-    DESCRIPTION  "lam.concepts — algebraic, numeric, and categorical C++23 concepts"
-    LICENSE      "Apache-2.0 WITH LLVM-exception OR MIT OR BSL-1.0"
-    CXX_MODULES_DIRECTORY "include/lam/concepts"
-    DESTINATION  ${CMAKE_INSTALL_LIBDIR}/cps
-  )
-endif()
-
-
-
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfig.cmake" [[
-include(CMakeFindDependencyMacro)
-include("${CMAKE_CURRENT_LIST_DIR}/lam_conceptsTargets.cmake")
-# Create the legacy alias so users can still type lam::concepts
-if(TARGET lam_concepts::concepts AND NOT TARGET lam::concepts)
-  get_target_property(_aliased lam_concepts::concepts ALIASED_TARGET)
-  if(_aliased)
-    add_library(lam::concepts ALIAS ${_aliased})
-  else()
-    add_library(lam::concepts ALIAS lam_concepts::concepts)
-  endif()
-  unset(_aliased)
-endif()
-]])
-
-write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfigVersion.cmake"
-  VERSION ${PROJECT_VERSION}
-  COMPATIBILITY SameMajorVersion
-)
-
-install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfig.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/lam_conceptsConfigVersion.cmake"
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_concepts
+lam_install_module_package(concepts
+  NAME        concepts
+  DESCRIPTION "lam.concepts — algebraic, numeric, and categorical C++ concepts"
+  LICENSE     "Apache-2.0 WITH LLVM-exception OR MIT OR BSL-1.0"
 )
