@@ -8,4 +8,3 @@ It is licensed under any three -- consumer's choice -- of the following:
 - Apache 2.0 with LLVM Exception
 - MIT License (MIT)
 - Boost Software License 1.0 (BSL-1.0)
-
