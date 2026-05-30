@@ -1,6 +1,6 @@
 .DS_Store
 /build*
-/cmake*
+gcm.cache/
 
 # Prerequisites
 *.d

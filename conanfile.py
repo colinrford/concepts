@@ -7,7 +7,7 @@
 #   conan create . --profile <your-profile>
 #
 # Consumer projects can then declare:
-#   requires = "lam_concepts/0.1.260526"
+#   requires = "lam_concepts/<version>"   # version comes from the VERSION file
 #
 # This recipe is supplementary to the project's primary CMake+CPS distribution
 # path — see CMakeLists.txt and the install(PACKAGE_INFO) block for the
@@ -15,12 +15,11 @@
 
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
-from conan.tools.files import copy
+from conan.tools.files import copy, load
 import os
 
 class LamConceptsConan(ConanFile):
     name = "lam_concepts"
-    version = "0.1.260526"
     license = "Apache-2.0 WITH LLVM-exception OR MIT OR BSL-1.0"
     author = "Colin Ford"
     url = "https://github.com/colinrford/concepts"
@@ -32,10 +31,19 @@ class LamConceptsConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     package_type = "static-library"
 
+    def set_version(self):
+        # Single source of truth: the top-level VERSION file, which CMakeLists
+        # also reads. Editing VERSION updates both the CMake project version and
+        # this recipe — they never drift.
+        self.version = load(
+            self, os.path.join(self.recipe_folder, "VERSION")
+        ).strip()
+
     # No external Conan deps for lam.concepts; it sits at the bottom of the
     # lam dependency tree.
 
     exports_sources = (
+        "VERSION",
         "CMakeLists.txt",
         "concepts_config.cppm.in",
         "src/*",
@@ -82,9 +90,10 @@ class LamConceptsConan(ConanFile):
 
     def package_info(self):
         # Match the CMake export names so find_package(lam_concepts) and the
-        # Conan-generated CMakeDeps both yield the same lam::concepts target.
+        # Conan-generated CMakeDeps both yield the same target. Path A (per-
+        # submodule primary CPS) namespaces this as lam_concepts::concepts.
         self.cpp_info.set_property("cmake_file_name", "lam_concepts")
-        self.cpp_info.set_property("cmake_target_name", "lam::concepts")
+        self.cpp_info.set_property("cmake_target_name", "lam_concepts::concepts")
         self.cpp_info.libs = ["lam_concepts"]
         # CPS metadata lives under <pkg>/lib/cps for CMake 4.3+ consumers that
         # read CPS in addition to the legacy *Config.cmake.
