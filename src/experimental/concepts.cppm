@@ -14,11 +14,11 @@
 
 module;
 
-import std;
-
 export module lam.concepts;
 
 export import :config;
+
+import std;
 
 /*
  *  all concepts will be declared with _c to distinguish them from types, etc

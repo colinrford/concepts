@@ -3,9 +3,9 @@
 
 module;
 
-import std;
-
 export module lam.concepts:config;
+
+import std;
 
 export namespace lam::concepts::config
 {
