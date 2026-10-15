@@ -141,9 +141,14 @@ function(lam_install_module_package target)
     NAMESPACE ${_pkg}::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${_pkg})
 
-  # Primary CPS (Common Package Specification). Guarded so CMake < 4.3, which
-  # lacks install(PACKAGE_INFO), still configures (legacy *Config.cmake remains).
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.3)
+  # Primary CPS (Common Package Specification). Guarded on CMake >= 4.3 (which
+  # adds install(PACKAGE_INFO)) AND on the opt-in LAM_INSTALL_CPS switch.
+  # Default OFF: CMake >= 4.3 prefers CPS in find_package, but its CPS C++-module
+  # metadata omits cross-package `import` edges, so consumers of an installed
+  # module cannot resolve transitive module deps (e.g. lam.concepts). Opt in with
+  # -DLAM_INSTALL_CPS=ON once CMake emits inter-package C++-module edges.
+  option(LAM_INSTALL_CPS "Install CPS (.cps) package metadata" OFF)
+  if(LAM_INSTALL_CPS AND CMAKE_VERSION VERSION_GREATER_EQUAL 4.3)
     install(PACKAGE_INFO ${_pkg}
       EXPORT       ${_targets}
       VERSION      ${PROJECT_VERSION}
@@ -186,14 +191,24 @@ endfunction()
 # module library target to link (e.g. the bare target or its alias).
 # -----------------------------------------------------------------------------
 function(lam_add_config_dump link_target)
-  cmake_parse_arguments(PARSE_ARGV 1 _arg "" "NAME" "")
+  cmake_parse_arguments(PARSE_ARGV 1 _arg "" "NAME;MODULE;NAMESPACE" "")
   if(NOT _arg_NAME)
     message(FATAL_ERROR "lam_add_config_dump: NAME is required")
   endif()
 
+  # MODULE/NAMESPACE default to the lam.<name> / lam::<name>::config convention,
+  # but may be overridden when the module name and namespace diverge from <name>
+  # (e.g. polynomial_nttp: module lam.polynomial.nttp, ns lam::polynomial::nttp).
+  if(NOT _arg_MODULE)
+    set(_arg_MODULE "lam.${_arg_NAME}")
+  endif()
+  if(NOT _arg_NAMESPACE)
+    set(_arg_NAMESPACE "lam::${_arg_NAME}::config")
+  endif()
+
   set(_src "${CMAKE_CURRENT_BINARY_DIR}/${_arg_NAME}_config_dump.cpp")
   file(WRITE "${_src}"
-"import lam.${_arg_NAME};\nint main() { lam::${_arg_NAME}::config::print(); return 0; }\n")
+"import ${_arg_MODULE};\nint main() { ${_arg_NAMESPACE}::print(); return 0; }\n")
 
   add_executable(${_arg_NAME}_config_dump "${_src}")
   target_link_libraries(${_arg_NAME}_config_dump PRIVATE ${link_target})
